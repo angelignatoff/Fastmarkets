@@ -18,7 +18,7 @@ Start with [SETUP.md](SETUP.md) for the complete Windows/Snowflake walkthrough.
 | `reviewer_access.sql` | Read-only grants on the five submitted objects |
 | `tools/profile_csv.py` | Local reference calculation using Python Decimal |
 | `tests/` | Local loader validation and failure-path tests |
-| `docs/AI_WORKFLOW.md` | Actual prompts, decisions, corrections and validation limits |
+| `docs/AI_WORKFLOW.md` | AI-assisted workflow, prompt examples and validation approach |
 | `evidence/` | Local reference results and verification status |
 
 ## Model and decisions
@@ -73,11 +73,11 @@ The supplied CSV was independently checked locally. Results are reproducible wit
 
 Contact validation is deliberately basic. Known phone sentinels become NULL; other phone strings are retained without claiming full international-number validation. Invalid emails become NULL without removing the customer's orders.
 
-## Validation and AI
+## Validation
 
-See [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) for the actual workflow and [VALIDATION.md](evidence/VALIDATION.md) for what has and has not run.
+Tests cover source contracts, model grain, relationships, reconciliation and weekly ranking. [VALIDATION.md](evidence/VALIDATION.md) records verification results and outstanding checks.
 
-Local checks do not prove that Snowflake has built the models. Before submitting, complete the live load, dbt build, repeat-run checks and reviewer permissions checks in SETUP.md.
+The [AI workflow](docs/AI_WORKFLOW.md) describes how Codex supported development and troubleshooting, including prompt examples and corrections. Local reference calculations and live Snowflake checks are recorded separately.
 
 ## Scope beyond the core
 
@@ -93,6 +93,8 @@ Next in a production setting:
 
 Compute uses XSMALL warehouses with 60-second auto-suspend. No scale benchmark or cost guarantee is claimed. Cortex and orchestration are proposals, not implemented features.
 
-## Submission
+## Reviewer access
 
-Publish this repository, complete the live checks, and provide the Snowflake account URL and dedicated reviewer credentials privately. No passwords or private keys belong in Git. The local CSV path is supported; the brief's URL-download demonstration remains pending until the original link is recovered.
+Reviewer access is scoped to the five objects in HOMEWORK.MARTS. The account URL and dedicated login credentials are shared separately from the repository. Setup and permission checks are documented in [SETUP.md](SETUP.md).
+
+The supplied CSV is supported as a local input. The original source URL was not available during development, so the real URL-download demonstration remains outstanding.

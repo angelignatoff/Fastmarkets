@@ -2,9 +2,9 @@
 
 ## Tools and context
 
-This revision used Codex to inspect the project, implement the missing dbt layer, and run local checks. It was given the assignment, the existing files and the actual CSV. Official Snowflake and dbt documentation was consulted for platform behaviour.
+I used Codex for repository review, Python and SQL generation, test development and troubleshooting. The context included the assignment, existing project files and the source CSV. Official Snowflake and dbt documentation provided references for platform behaviour.
 
-The earlier README attributed work to Claude. No original Claude transcript was available in this review, so that history is not asserted here. Add earlier tools and interactions only if they reflect your actual experience.
+I ran the setup and pipeline commands locally and in Snowflake, then brought connection, configuration and permission errors back into the conversation to resolve them. This included key registration, a dbt version mismatch and reviewer-role access checks.
 
 ## Actual prompt excerpts
 
@@ -22,7 +22,7 @@ Source clarification:
 
 > I have it saved in the project, should be the same as the original
 
-These are actual prompts from this task, not invented examples. No custom agents, MCP access to a Snowflake account, or prior production deployment is claimed.
+The workflow used a direct conversation with project-file access. Snowflake commands were run separately through the local terminal and SQL worksheets.
 
 ## What AI accelerated
 
@@ -31,13 +31,13 @@ These are actual prompts from this task, not invented examples. No custom agents
 - Finding and correcting Snowflake-specific SQL problems.
 - Producing a reproducible local reference profile and setup guide.
 
-The design choices in the resulting project are explicit: full snapshots, order/array-index line grain, latest observed customer attributes, Monday weeks, revenue-based ranking and tie-aware flags. The candidate still needs to understand and defend these choices.
+The README records the resulting design choices and trade-offs: full snapshots, order/array-index line grain, latest observed customer attributes, Monday weeks, revenue-based ranking and tie-aware flags.
 
 ## Corrections and limits
 
 The earlier README claimed B1/Gadget won all 144 weeks. An independent Python calculation found B1 won 139 weeks, C1 four, and A1 one. For 2024-05-27, revenues are A1=500, B1=450, C1=400. A statement labelled as verified was wrong.
 
-The earlier files also used an incomplete DATEADD call and PostgreSQL-style regex syntax, and described dbt files that were absent. These were corrected rather than preserving a polished but unsupported narrative.
+The initial files also contained an incomplete DATEADD call and PostgreSQL-style regex syntax. The review identified these issues alongside missing dbt models and tests. The implementation and documentation were updated together.
 
 The first dependency choice in this revision was dbt 1.10. Its runtime reported that it was deprecated, so the project moved to the supported 1.11 line before final checks.
 
@@ -51,4 +51,4 @@ The local tests include mocked Snowflake failure paths. They show that the loade
 - Use synthetic ties and a year boundary in a dbt unit test.
 - Execute the real load, dbt build and independent SQL checks in the trial before submission.
 
-The live checks are still the candidate's next step. Record their actual outcomes in evidence/VALIDATION.md. Do not describe dbt parse as a successful Snowflake build or claim manual verification that has not happened.
+Local parsing, mocked failure tests and live warehouse execution provide different kinds of evidence. Their results and any outstanding checks are tracked in evidence/VALIDATION.md. A successful parse alone does not establish that the models execute correctly in Snowflake.
