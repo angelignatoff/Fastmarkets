@@ -18,7 +18,7 @@ Start with [SETUP.md](SETUP.md) for the complete Windows/Snowflake walkthrough.
 | `reviewer_access.sql` | Read-only grants on the five submitted objects |
 | `tools/profile_csv.py` | Local reference calculation using Python Decimal |
 | `tests/` | Local loader validation and failure-path tests |
-| `docs/AI_WORKFLOW.md` | AI-assisted workflow, prompt examples and validation approach |
+| `docs/AI_WORKFLOW.md` | Summary of AI assistance with planning, code and account setup |
 | `evidence/` | Local reference results and verification status |
 
 ## Model and decisions
@@ -77,7 +77,7 @@ Contact validation is deliberately basic. Known phone sentinels become NULL; oth
 
 Tests cover source contracts, model grain, relationships, reconciliation and weekly ranking. [VALIDATION.md](evidence/VALIDATION.md) records verification results and outstanding checks.
 
-The [AI workflow](docs/AI_WORKFLOW.md) describes how Codex supported development and troubleshooting, including prompt examples and corrections. Local reference calculations and live Snowflake checks are recorded separately.
+The [AI workflow](docs/AI_WORKFLOW.md) summarises AI assistance with planning, code and account setup. Local reference calculations and live Snowflake checks are recorded separately.
 
 ## Scope beyond the core
 
