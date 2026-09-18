@@ -1,0 +1,237 @@
+version: 2
+models:
+  - name: stg_orders
+    description: "One source row per order; type conversion and JSON parsing. Invalid values fail tests."
+    columns:
+      - name: order_id
+        description: "Order identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Customer identifier."
+        data_tests:
+          - not_null
+      - name: customer_name
+        description: "Trimmed customer name."
+        data_tests:
+          - not_null
+      - name: customer_phone
+        description: "Unmodified phone."
+      - name: customer_email
+        description: "Unmodified email."
+      - name: order_date
+        description: "Order date."
+        data_tests:
+          - not_null
+      - name: order_total
+        description: "Header amount in source currency."
+        data_tests:
+          - not_null
+      - name: order_items
+        description: "Parsed JSON array; validated by order_items_are_arrays."
+        data_tests:
+          - not_null
+  - name: stg_customers
+    description: "Latest order attributes per customer, with contact cleaning."
+    columns:
+      - name: customer_id
+        description: "Customer identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_name
+        description: "Latest customer name."
+        data_tests:
+          - not_null
+      - name: customer_phone
+        description: "Quote-stripped phone; known invalid values become NULL."
+      - name: customer_email
+        description: "Lowercase email matching the documented basic pattern, otherwise NULL."
+  - name: stg_order_items
+    description: "One row per JSON array position in an order."
+    columns:
+      - name: order_item_id
+        description: "Order ID and zero-based array index separated by a colon."
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "Parent order identifier."
+        data_tests:
+          - not_null
+      - name: line_number
+        description: "Zero-based array position."
+        data_tests:
+          - not_null
+      - name: customer_id
+        description: "Customer placing the order."
+        data_tests:
+          - not_null
+      - name: order_date
+        description: "Order date."
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "Source product code."
+        data_tests:
+          - not_null
+      - name: product_name
+        description: "Product name on this order."
+        data_tests:
+          - not_null
+      - name: quantity
+        description: "Positive integer quantity."
+        data_tests:
+          - not_null
+      - name: unit_price
+        description: "Source price per unit, with two decimal places."
+        data_tests:
+          - not_null
+      - name: line_revenue
+        description: "Quantity multiplied by unit price."
+        data_tests:
+          - not_null
+  - name: dim_customer
+    description: "Customer table: one row per customer, latest observed attributes (Type 1)."
+    columns:
+      - name: customer_id
+        description: "Customer primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_name
+        description: "Latest observed name."
+        data_tests:
+          - not_null
+      - name: customer_phone
+        description: "Cleaned phone; NULL if missing or a known invalid sentinel."
+      - name: customer_email
+        description: "Cleaned email; NULL if it fails the basic format check."
+  - name: dim_product
+    description: "Product table: latest observed name per source product code. Prices remain on order lines."
+    columns:
+      - name: product_id
+        description: "Product primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: "Latest observed product name."
+        data_tests:
+          - not_null
+  - name: fct_orders
+    description: "Order table: one row per source order. Do not sum order_total after a line-item join."
+    columns:
+      - name: order_id
+        description: "Order primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Foreign key to dim_customer."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_id
+      - name: order_date
+        description: "Order date."
+        data_tests:
+          - not_null
+      - name: order_total
+        description: "Source header total; reconciled to order lines."
+        data_tests:
+          - not_null
+  - name: fct_order_items
+    description: "OrderItem table: one row per order and JSON array index. Rebuilt in full."
+    columns:
+      - name: order_item_id
+        description: "Snapshot line key; array reorder can change this key."
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "Foreign key to fct_orders."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_orders')
+                field: order_id
+      - name: line_number
+        description: "Zero-based JSON array index."
+        data_tests:
+          - not_null
+      - name: customer_id
+        description: "Foreign key to dim_customer."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_id
+      - name: order_date
+        description: "Order date copied from its header."
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "Foreign key to dim_product."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_id
+      - name: quantity
+        description: "Positive whole units purchased."
+        data_tests:
+          - not_null
+      - name: unit_price
+        description: "Price paid per unit, in the unspecified source currency."
+        data_tests:
+          - not_null
+      - name: line_revenue
+        description: "Quantity times price, with two decimal places."
+        data_tests:
+          - not_null
+  - name: agg_weekly_product
+    description: "View at Monday-start week/product grain. Top seller means highest revenue; all tied leaders get 1. Products with no sales in a week are absent."
+    columns:
+      - name: week_start
+        description: "ISO Monday date, independent of session WEEK_START."
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "Product code."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_id
+      - name: product_name
+        description: "Current product name."
+        data_tests:
+          - not_null
+      - name: units_sold
+        description: "Sum of quantities."
+        data_tests:
+          - not_null
+      - name: order_count
+        description: "Distinct orders containing the product; not additive across products."
+        data_tests:
+          - not_null
+      - name: revenue
+        description: "Sum of line revenues in source currency."
+        data_tests:
+          - not_null
+      - name: is_top_seller
+        description: "1 for each revenue leader in a week, 0 otherwise."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false

@@ -1,0 +1,27 @@
+version: 2
+sources:
+  - name: raw
+    database: HOMEWORK
+    schema: RAW
+    description: "Replaceable CSV snapshot. All fields are retained as text."
+    tables:
+      - name: homework_obt
+        description: "One source record per order, with order_items stored as a JSON string."
+        columns:
+          - name: customer_id
+            description: "Source customer identifier."
+          - name: customer_name
+            description: "Unmodified customer name."
+          - name: customer_phone
+            description: "Unmodified phone, including quote artifacts and sentinel values."
+          - name: customer_email
+            description: "Unmodified email."
+          - name: order_id
+            description: "Source order identifier."
+            data_tests: [unique, not_null]
+          - name: order_date
+            description: "Source date in YYYY-MM-DD format."
+          - name: order_total
+            description: "Source order total in an unspecified single currency."
+          - name: order_items
+            description: "JSON array with product_id, product_name, quantity and price."

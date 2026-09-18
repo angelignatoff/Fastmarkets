@@ -1,0 +1,25 @@
+version: 2
+unit_tests:
+  - name: weekly_ties_and_year_boundary
+    description: "Tied leaders, repeated lines, distinct orders, Sunday/Monday and a year boundary."
+    model: agg_weekly_product
+    given:
+      - input: ref('fct_order_items')
+        rows:
+          - {order_id: 1, order_date: '2024-12-29', product_id: A, quantity: 1, line_revenue: 10}
+          - {order_id: 1, order_date: '2024-12-29', product_id: A, quantity: 1, line_revenue: 10}
+          - {order_id: 2, order_date: '2024-12-29', product_id: B, quantity: 1, line_revenue: 20}
+          - {order_id: 3, order_date: '2024-12-29', product_id: C, quantity: 1, line_revenue: 5}
+          - {order_id: 4, order_date: '2024-12-30', product_id: C, quantity: 3, line_revenue: 15}
+          - {order_id: 5, order_date: '2025-01-01', product_id: C, quantity: 1, line_revenue: 5}
+      - input: ref('dim_product')
+        rows:
+          - {product_id: A, product_name: Alpha}
+          - {product_id: B, product_name: Beta}
+          - {product_id: C, product_name: Gamma}
+    expect:
+      rows:
+        - {week_start: '2024-12-23', product_id: A, product_name: Alpha, units_sold: 2, order_count: 1, revenue: 20, is_top_seller: 1}
+        - {week_start: '2024-12-23', product_id: B, product_name: Beta, units_sold: 1, order_count: 1, revenue: 20, is_top_seller: 1}
+        - {week_start: '2024-12-23', product_id: C, product_name: Gamma, units_sold: 1, order_count: 1, revenue: 5, is_top_seller: 0}
+        - {week_start: '2024-12-30', product_id: C, product_name: Gamma, units_sold: 4, order_count: 2, revenue: 20, is_top_seller: 1}

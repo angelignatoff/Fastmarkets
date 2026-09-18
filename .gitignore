@@ -1,0 +1,16 @@
+.venv/
+.idea/
+.secrets/
+.env
+.env.*
+*.pem
+*.p8
+*.key
+__pycache__/
+*.pyc
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+logs/
+evidence/private/
+/fastmarkets/

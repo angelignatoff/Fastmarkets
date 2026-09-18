@@ -1,0 +1,28 @@
+{
+  "verification": "local Python reference; not a Snowflake execution",
+  "sha256": "8265ee2699efb181dd877dbdfb15ae5de022ac9f9b7ef3a208a2ff25e3705ad3",
+  "orders": 1000,
+  "distinct_orders": 1000,
+  "customers": 1000,
+  "products": 3,
+  "date_min": "2023-01-01",
+  "date_max": "2025-09-26",
+  "line_items": 1674,
+  "monday_weeks": 144,
+  "week_product_rows": 424,
+  "exact_total_mismatches": 0,
+  "duplicate_product_orders": 0,
+  "top_revenue_weeks": {
+    "A1": 1,
+    "B1": 139,
+    "C1": 4
+  },
+  "tied_weeks": 0,
+  "invalid_emails": 87,
+  "phone_sentinels": 100,
+  "example_week_2024_05_27": {
+    "A1": "500.0",
+    "B1": "450.0",
+    "C1": "400.0"
+  }
+}
