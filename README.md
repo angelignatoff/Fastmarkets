@@ -1,100 +1,55 @@
 # Snowflake orders take-home
 
-A local Python loader lands a CSV snapshot in Snowflake. dbt parses the JSON order items, cleans customer contact fields, and builds four tables plus a weekly product view.
+`pipe.ipynb` downloads the source CSV and loads it inside Snowflake. dbt then parses the JSON order items and builds customer, product, order and order-item tables, plus a weekly product aggregation view.
 
-Start with [SETUP.md](SETUP.md) for the complete Windows/Snowflake walkthrough.
+Follow [SETUP.md](SETUP.md) to run the project. The original [loader.py](loader.py) is retained as a local command-line alternative.
 
-## Project
+## Project files
 
-| File or directory | Purpose |
+| Path | Purpose |
 | --- | --- |
-| `loader.py` | Download or read the CSV, validate it, and load the raw snapshot |
-| `bootstrap.sql` | Create the database, schemas, warehouse and engineering role |
-| `dbt/models/staging/` | Type conversion, contact cleaning and JSON flattening |
-| `dbt/models/marts/` | Customer, Product, Order, OrderItem and weekly aggregation |
-| `dbt/tests/` | Data contracts, grain and reconciliation tests |
-| `dbt/models/unit_tests.yml` | Synthetic weekly tie and calendar-boundary test |
-| `profiling.sql`, `verify.sql` | Independent source probes and final inspection queries |
-| `reviewer_access.sql` | Read-only grants on the five submitted objects |
-| `tools/profile_csv.py` | Local reference calculation using Python Decimal |
-| `tests/` | Local loader validation and failure-path tests |
-| `docs/AI_WORKFLOW.md` | Summary of AI assistance with planning, code and account setup |
-| `evidence/` | Local reference results and verification status |
+| `pipe.ipynb` | Main loader: URL download, validation, staged COPY and raw publication |
+| `bootstrap.sql` | Database, schemas, warehouse and engineering role |
+| `dbt/` | Models, macros, tests, documentation and connection profile |
+| `profiling.sql`, `verify.sql` | Source exploration and final result checks |
+| `reviewer_access.sql` | Read-only access to the five final objects |
+| `loader.py`, `tests/test_loader.py` | Original local loader and its tests |
+| `tools/` | Key-pair setup and independent CSV profiling |
+| `evidence/` | Reference results and validation notes |
+| `docs/AI_WORKFLOW.md` | AI workflow summary |
 
-## Model and decisions
+## Modelling decisions
 
-The analytical layer is a small dimensional model. Natural source identifiers are adequate for one source. A Data Vault would add history and integration structures that this exercise does not need.
+The project uses a small dimensional model. Natural source identifiers are sufficient for this single source; full rebuilds are appropriate for 1,000 orders and handle corrected or removed historical rows without incremental-load bookkeeping.
 
-| Snowflake object in HOMEWORK.MARTS | Grain | Materialization |
+| Object in `HOMEWORK.MARTS` | Grain | Type |
 | --- | --- | --- |
-| DIM_CUSTOMER | One customer | Table |
-| DIM_PRODUCT | One product code | Table |
-| FCT_ORDERS | One order | Table |
-| FCT_ORDER_ITEMS | One order and JSON array position | Table |
-| AGG_WEEKLY_PRODUCT | One Monday-start week and product with sales | View |
+| `DIM_CUSTOMER` | One customer | Table |
+| `DIM_PRODUCT` | One product code | Table |
+| `FCT_ORDERS` | One order | Table |
+| `FCT_ORDER_ITEMS` | One order and JSON array position | Table |
+| `AGG_WEEKLY_PRODUCT` | One Monday-start week and product with sales | View |
 
-OrderItem uses the array index to preserve repeated appearances of a product in an order. The combined key is `order_id:line_number`; array reordering may change it. This is suitable for a rebuilt snapshot, not a durable line identifier for change capture.
+Order-item keys combine order ID and array position, preserving repeated products within an order. Reordering the source array can change these keys, so they are snapshot identifiers rather than durable change-tracking keys.
 
-Customer and product names use the latest observed order attributes, with deterministic tie-breakers. This is Type 1/current-state behaviour, not reconstructed history. The single source currently has one customer per order, but the model permits repeat customers.
+Customer and product descriptions use the latest observed order attributes (Type 1). Phone sentinels and invalid email formats become NULL without removing orders. Prices remain on order lines and use fixed-point decimals. The source has no currency field, so calculations assume one unspecified currency. Header totals reconcile to line totals within 0.01; do not sum header totals after joining to multiple lines.
 
-Prices belong to order lines. They use fixed-point decimals, as do order totals and revenue. Currency is absent from the source: the project assumes one currency and does not invent USD or GBP. Order totals remain independent of line totals and are reconciled within 0.01. Do not sum header totals after joining orders to items.
+**Top seller means highest revenue.** All tied leaders receive `is_top_seller = 1`; other products that sold that week receive 0. Weeks start on Monday independently of the session's `WEEK_START` setting. The view also includes units and distinct order counts. Products with no sales are absent, and order counts must not be added across products.
 
-The source contract assumes positive whole quantities and nonnegative monetary values with at most two decimal places. Returns and fractional quantities require an explicit rule change.
+## Execution and validation
 
-Top seller means highest revenue, not most units. Every tied leader receives `is_top_seller = 1`; all other products that sold that week receive 0. The view also reports units and distinct orders. Products with zero sales are absent. Order counts are not additive across products. Monday dates are calculated with DAYOFWEEKISO, independently of the session's WEEK_START setting.
+The notebook uses Snowflake's active Snowpark session, keeping ingestion visible without separate local credentials. It validates the CSV header and JSON arrays, loads a temporary candidate with strict COPY, checks counts and publishes with one `INSERT OVERWRITE`. Raw values stay as text for dbt to parse and validate. dbt runs from the local terminal using key-pair authentication and executes its SQL in Snowflake.
 
-## Loading and transformation
+Tests cover source contracts, uniqueness, relationships, order reconciliation and weekly results. A synthetic unit test covers ties, repeated product lines and a week crossing the year boundary. An independent Python calculation provides a reference in [evidence/local_profile.json](evidence/local_profile.json); execution status is recorded in [evidence/VALIDATION.md](evidence/VALIDATION.md).
 
-Python runs locally because downloading and uploading a file needs little infrastructure. SQL transformations live in dbt and execute in Snowflake. Key-pair authentication avoids storing Snowflake login passwords in scripts.
+Expected results for the supplied snapshot: **1,000 orders, 1,000 customers, 3 products, 1,674 items and 424 week/product rows across 144 weeks**. For the week beginning 2024-05-27, revenues are A1 = 500, B1 = 450 and C1 = 400, making A1 the winner.
 
-Raw fields remain text, including the JSON string and dirty contact values. The loader validates the header, field counts and nonempty JSON arrays, then uses strict COPY into a temporary candidate. Only a complete, row-count-checked load is published using one INSERT OVERWRITE statement. This preserves the existing raw snapshot on download/COPY/validation failure. It is a replaceable snapshot, not immutable history.
+## Operational choices
 
-The loader prints a source SHA-256, row counts and Snowflake query IDs. A successful raw load does not establish business validity: dbt tests check types, identifiers, item fields and reconciliation. Failed dbt runs are not accepted as a completed release.
+Candidate loading protects the current raw snapshot if download, validation or COPY fails. Repeated successful loads replace it instead of appending duplicates. XSMALL warehouses use 60-second auto-suspend. Secrets stay outside Git, and reviewer access is limited to the five marts.
 
-All marts rebuild in full. At 1,000 orders, this is easier to explain and correctly handles corrected or removed historical rows. Incremental modelling would require a source change timestamp, deletion policy and durable line identifiers.
+With more time, I would schedule ingestion followed by dbt, store load hashes and results in an audit table, and add failure notifications. dbt currently replaces models individually, so a failed build can leave mixed model versions; publishing all marts together would be a further improvement. No scale benchmark or measured cost is claimed.
 
-The schema macro deliberately targets STAGING and MARTS in this dedicated trial database. It is not a shared multi-developer deployment design.
+## Submission
 
-## Source findings
-
-The supplied CSV was independently checked locally. Results are reproducible with:
-
-```powershell
-.\.venv\Scripts\python.exe tools/profile_csv.py --output evidence/local_profile.json
-```
-
-- 1,000 orders, 1,000 customers and three products.
-- 1,674 order items; no repeated product within an order in this snapshot.
-- Dates from 2023-01-01 to 2025-09-26.
-- 144 Monday-start weeks and 424 week/product rows.
-- Exact reconciliation of all source order totals.
-- Revenue winners: A1 in one week, B1 in 139 weeks, C1 in four weeks; no ties.
-- The documented cleaning rules yield 100 missing phones and 87 missing emails.
-
-Contact validation is deliberately basic. Known phone sentinels become NULL; other phone strings are retained without claiming full international-number validation. Invalid emails become NULL without removing the customer's orders.
-
-## Validation
-
-Tests cover source contracts, model grain, relationships, reconciliation and weekly ranking. [VALIDATION.md](evidence/VALIDATION.md) records verification results and outstanding checks.
-
-The [AI workflow](docs/AI_WORKFLOW.md) summarises AI assistance with planning, code and account setup. Local reference calculations and live Snowflake checks are recorded separately.
-
-## Scope beyond the core
-
-Implemented: strict candidate loading, safe raw publication, repeatable full rebuilds, environment-based authentication, query tags, data tests, a synthetic weekly unit test and scoped reviewer grants.
-
-Next in a production setting:
-- Run the Python loader and dbt as an ordered scheduled job with failure notifications.
-- Record load hashes and execution results in a durable audit table.
-- Gate publication of all marts together; dbt currently replaces models individually, so a failed build can leave a mixture of old and new tables.
-- Add volume/contact-quality trend monitoring.
-- Measure query profiles and change behaviour before choosing incremental processing.
-- Add a semantic layer only after defining currency and agreeing the revenue/units vocabulary.
-
-Compute uses XSMALL warehouses with 60-second auto-suspend. No scale benchmark or cost guarantee is claimed. Cortex and orchestration are proposals, not implemented features.
-
-## Reviewer access
-
-Reviewer access is scoped to the five objects in HOMEWORK.MARTS. The account URL and dedicated login credentials are shared separately from the repository. Setup and permission checks are documented in [SETUP.md](SETUP.md).
-
-The supplied CSV is supported as a local input. The original source URL was not available during development, so the real URL-download demonstration remains outstanding.
+The [AI workflow](docs/AI_WORKFLOW.md) describes the assistance used during the project. Reviewer account details are shared privately; [reviewer_access.sql](reviewer_access.sql) grants the purpose-built role read-only access to the final tables and view.
