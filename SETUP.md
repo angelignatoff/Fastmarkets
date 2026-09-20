@@ -2,6 +2,16 @@
 
 Use `pipe.ipynb` in Snowflake for ingestion, then run dbt from local PowerShell. Run local commands from the repository folder. SQL blocks belong in a Snowflake SQL worksheet.
 
+**Trial accounts:** external access is disabled by default. If Snowflake reports `External access is not supported for trial accounts`, run `bootstrap.sql`, skip the network-integration SQL and notebook step below, and complete step 3 for local credentials. Then run these commands in PowerShell and continue with verification and reviewer access:
+
+```powershell
+$env:HOMEWORK_CSV_URL = 'https://gist.githubusercontent.com/fm-dp/e5beb68cf717dc6a8db91250e9320b9e/raw/c442fe6feb1f73f9f9db04171aee6fe02505ceb8'
+.\.venv\Scripts\python.exe loader.py
+.\.venv\Scripts\dbt.exe build --project-dir dbt --profiles-dir dbt
+```
+
+This downloads the CSV locally and loads the same Snowflake raw table. It does not require notebook external access. The assignment permits local Python. Running the URL notebook inside Snowflake requires external access to be enabled on the account; [Snowflake documents this trial limitation](https://docs.snowflake.com/en/developer-guide/external-network-access/external-network-access-limitations).
+
 ## 1. Create the Snowflake objects
 
 In your Enterprise trial, run [bootstrap.sql](bootstrap.sql) as ACCOUNTADMIN. It creates `HOMEWORK`, the `RAW`, `STAGING` and `MARTS` schemas, `HOMEWORK_WH` and `HOMEWORK_ENGINEER`, and assigns the role to your current user.

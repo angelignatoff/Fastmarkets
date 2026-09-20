@@ -4,6 +4,8 @@
 
 Follow [SETUP.md](SETUP.md) to run the project. The original [loader.py](loader.py) is retained as a local command-line alternative.
 
+**Trial account:** Snowflake disables external access by default, which prevents the notebook from downloading the CSV inside Snowflake. Use `loader.py` locally for the URL download and load, followed by the same dbt build. The notebook requires an account with external access enabled. See [Snowflake's limitation](https://docs.snowflake.com/en/developer-guide/external-network-access/external-network-access-limitations).
+
 ## Project files
 
 | Path | Purpose |

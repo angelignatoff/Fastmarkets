@@ -12,6 +12,6 @@
 
 ## Snowflake execution
 
-Earlier loading and dbt runs were reported successful during setup; their query IDs and build logs are not archived here. After removing the notebook's workspace-file override, the Snowflake URL download encountered a hostname-resolution error. The URL works locally; the notebook's external-access integration must be checked and enabled as described in [SETUP.md](../SETUP.md). Rerun the notebook, `dbt build` and `verify.sql` after configuring access.
+Earlier loading and dbt runs were reported successful during setup; their query IDs and build logs are not archived here. After removing the notebook's workspace-file override, the Snowflake URL download encountered a hostname-resolution error. Integration creation then confirmed that external access is not supported on this trial account. The URL works locally. Use the existing local loader as described in [SETUP.md](../SETUP.md), then run `dbt build` and `verify.sql`. A successful URL load inside the Snowflake notebook is not claimed.
 
 Expected unchanged-snapshot results: 1,000 orders and customers, 3 products, 1,674 items, 144 weeks and 424 week/product rows. Winning weeks are A1 = 1, B1 = 139 and C1 = 4. For week 2024-05-27, A1 wins with revenue 500.
