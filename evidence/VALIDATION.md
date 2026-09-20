@@ -12,6 +12,19 @@
 
 ## Snowflake execution
 
-Earlier loading and dbt runs were reported successful during setup; their query IDs and build logs are not archived here. After removing the notebook's workspace-file override, the Snowflake URL download encountered a hostname-resolution error. Integration creation then confirmed that external access is not supported on this trial account. The URL works locally. Use the existing local loader as described in [SETUP.md](../SETUP.md), then run `dbt build` and `verify.sql`. A successful URL load inside the Snowflake notebook is not claimed.
+The supplied execution output confirms a successful HTTPS load through the local `loader.py`, followed by a successful live `dbt build`:
+
+| Check | Actual result |
+| --- | --- |
+| Source / loaded rows | 1,000 / 1,000 |
+| Source SHA-256 | `85178e0f71545320eeb2b1e145af06806c83e98d0a24c9e881fd4909d467ef31` |
+| COPY query ID | `01c73309-0000-9d25-0001-23820009320e` |
+| Publication query ID | `01c73309-0000-9d25-0001-238200093212` |
+| Models built | 4 tables and 4 views |
+| Tests passed | 65 data tests and 1 unit test |
+| dbt summary | `PASS=74 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=74` |
+| Table row counts | 1,000 orders, 1,000 customers, 3 products, 1,674 items |
+
+The Snowflake notebook URL route remains blocked by this trial account's external-access restriction. The confirmed submission route is local URL extraction/loading followed by dbt. Final `verify.sql` inspection and reviewer-access checks are described in [SETUP.md](../SETUP.md); this build output does not establish those separate checks.
 
 Expected unchanged-snapshot results: 1,000 orders and customers, 3 products, 1,674 items, 144 weeks and 424 week/product rows. Winning weeks are A1 = 1, B1 = 139 and C1 = 4. For week 2024-05-27, A1 wins with revenue 500.
